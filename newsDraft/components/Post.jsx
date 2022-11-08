@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/AntDesign';
 import {CardAction, CardButton} from 'react-native-material-cards';
 import { Dimensions, Linking } from 'react-native';
+import { format } from "date-fns";
 
 const Post = React.forwardRef((props, ref) => {
 
@@ -76,7 +77,10 @@ const Post = React.forwardRef((props, ref) => {
           paddingLeft: 10}}>{props.item.title}</Text>
         </View>
         <View style={styles.mainContainer}>
-          <Text style={{color : 'white'}}>{props.item.published}</Text>
+          <View style={{flexDirection : 'row'}}>
+            <Text style={{color : 'white', marginRight : 10}}>{format(new Date(props.item.published), "dd.MM.yy")}</Text>
+            <Text style={{color : 'yellow'}}>{props.item.link.split('/')[2]}</Text>
+          </View>
           <Pressable onPress={onPressButton}
           pressEffect="ripple"
           pressEffectColor='white'>
