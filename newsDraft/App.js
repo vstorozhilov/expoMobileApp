@@ -32,19 +32,19 @@ export default function App() {
 
   
   const getNews = async ()=> {
-    let response = await fetch('http://82.146.37.120:8080/documents?insight=True');
+    let response = await fetch('http://82.146.37.120:8080/documents?period=72');
     let JSresponse = await response.json();
 
-    let result = [];
-    for (let x = 0; x < JSresponse.length; x++) {
-      if (x) {
-          if (JSresponse[x].title != JSresponse[x-1].title) {
-              result.push(JSresponse[x]);
-          }
-      }
-    }
+   // let result = [];
+   // for (let x = 0; x < JSresponse.length; x++) {
+   //   if (x) {
+   //       if (JSresponse[x].title != JSresponse[x-1].title) {
+   //           result.push(JSresponse[x]);
+   //       }
+   //   }
+   // }
 
-    setPosts(result.map((item, index)=>({title : item.title,
+    setPosts(JSresponse.map((item, index)=>({title : item.title,
       link : item.link,
       published : item.published,
       summary : item.ds_insight.insight,
