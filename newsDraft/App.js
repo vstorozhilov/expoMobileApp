@@ -1,21 +1,11 @@
-import { StatusBar } from 'expo-status-bar';
-import { IconButton } from "@react-native-material/core";
-// import Icon from "@expo/vector-icons/MaterialCommunityIcons";
-import { View, ScrollView, Animated, LayoutAnimation} from 'react-native';
+import { View, ScrollView, Animated, LayoutAnimation, FlatList} from 'react-native';
 import { Button, IconComponentProvider } from "@react-native-material/core";
 import { useRef, useState, useEffect } from 'react';
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Post from './components/Post';
 import { Text } from 'react-native';
 
-
-// function zip(arrays) {
-//   return arrays[0].map(function(_,i){
-//       return arrays.map(function(array){return array[i]})
-//   });
-// }
-
-var previousFilterValue = -1;
+// var previousFilterValue = -1;
 // export var postRefs = null;
 // export var heights = null;
 
@@ -30,9 +20,9 @@ export default function App() {
   const [posts, setPosts] = useState([]);
   const scrollRef = useRef(null);
 
-  
+
   const getNews = async ()=> {
-    let response = await fetch('http://82.146.37.120:8080/documents?period=72');
+    let response = await fetch('http://82.146.37.120:8080/documents?period=24');
     let JSresponse = await response.json();
 
    // let result = [];

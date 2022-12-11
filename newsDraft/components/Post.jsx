@@ -1,6 +1,6 @@
 
 import { IconButton } from "@react-native-material/core";
-import { StyleSheet, Text, View, ScrollView, Animated, TouchableWithoutFeedback} from 'react-native';
+import { StyleSheet, Text, View, Animated} from 'react-native';
 import { Pressable} from "@react-native-material/core";
 import React, { useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/AntDesign';
@@ -13,6 +13,7 @@ const Post = React.forwardRef((props, ref) => {
   const ownref = useRef(null);
   const ownheight = useRef(new Animated.Value(0)).current;
   const iconRotation = useRef(new Animated.Value(0)).current;
+  const ownOpacity = useRef(new Animated.Value(0)).current;
 
   const onPressButton = (e)=>{
     if (props.filter !== props.index) { 
@@ -56,8 +57,19 @@ const Post = React.forwardRef((props, ref) => {
     };
   }
 
+  useEffect(()=>{
+    Animated.timing(ownOpacity,
+      {
+        toValue : 1,
+        duration : 500,
+        useNativeDriver: true,
+        delay: 500 * props.index
+      }).start();
+  }, []);
+
   return (
-      <View ref={ownref} style={{...styles.nestedContainer,
+      <Animated.View ref={ownref} style={{...styles.nestedContainer,
+          opacity : ownOpacity
         }}>
         <View style={{flex : 1}}>
         <View style={styles.titleContainer}>
@@ -132,7 +144,7 @@ const Post = React.forwardRef((props, ref) => {
             />
         </CardAction>
         </View>
-      </View>
+      </Animated.View>
   );
 });
 
