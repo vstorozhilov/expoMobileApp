@@ -16,7 +16,7 @@ import { Text } from 'react-native';
 
 export default function App() {
 
-  const [filter, setFilter] = useState(-1);
+  const [filter, setFilter] = useState(null);
   const [posts, setPosts] = useState([]);
   const scrollRef = useRef(null);
 
@@ -39,8 +39,8 @@ export default function App() {
       published : item.published,
       summary : item.ds_insight.insight,
       repost_cnt : item.repost_cnt,
-      index
-    })));
+      id : item._id
+    })).slice(0, 5));
   };
 
   useEffect(()=>{
@@ -110,13 +110,13 @@ export default function App() {
         paddingTop : 30,
         flex : 1,
         backgroundColor : 'black'}}>
-      <ScrollView scrollEnabled={filter >= 0 ? false : true} ref={scrollRef} contentContainerStyle={{
+      <ScrollView scrollEnabled={filter !== null ? false : true} ref={scrollRef} contentContainerStyle={{
         justifyContent : 'flex-start',
         alignItems : 'center',
         backgroundColor : 'black'
       }}>
-        {posts.length ? posts.map((item, iindex)=>(
-          <Post scrollRef={scrollRef} setPosts={setPosts} posts={posts} setFilter={setFilter} index={item.index} item={item} filter={filter} key={iindex}/>
+        {posts.length ? posts.map((item)=>(
+          <Post scrollRef={scrollRef} setPosts={setPosts} posts={posts} setFilter={setFilter} item={item} filter={filter} key={item.id}/>
         )) :
          <Text style={{paddingTop: 100, fontSize : 15, color : 'white'}}>Пожалуйста, подождите. Новости уже загружаются</Text>}
       </ScrollView>

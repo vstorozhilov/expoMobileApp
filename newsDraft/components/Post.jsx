@@ -5,7 +5,7 @@ import { Pressable} from "@react-native-material/core";
 import React, { useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/AntDesign';
 import {CardAction, CardButton} from 'react-native-material-cards';
-import { Dimensions, Linking } from 'react-native';
+import { Dimensions, Linking, LayoutAnimation } from 'react-native';
 import { format } from "date-fns";
 
 const Post = React.forwardRef((props, ref) => {
@@ -14,9 +14,10 @@ const Post = React.forwardRef((props, ref) => {
   const ownheight = useRef(new Animated.Value(0)).current;
   const iconRotation = useRef(new Animated.Value(0)).current;
   const ownOpacity = useRef(new Animated.Value(0)).current;
+  const [isExist, setIsExist] = useState(true);
 
   const onPressButton = (e)=>{
-    if (props.filter !== props.index) { 
+    if (props.filter !== props.item.id) { 
       Animated.timing(iconRotation,
         {
           toValue : -180,
@@ -69,7 +70,9 @@ const Post = React.forwardRef((props, ref) => {
 
   return (
       <Animated.View ref={ownref} style={{...styles.nestedContainer,
-          opacity : ownOpacity
+          opacity : ownOpacity,
+          height : isExist ? undefined : 0,
+          marginBottom : isExist ? 7 : 0,
         }}>
         <View style={{flex : 1}}>
         <View style={styles.titleContainer}>
@@ -124,15 +127,21 @@ const Post = React.forwardRef((props, ref) => {
         <CardAction
           inColumn={false}>
             <IconButton
-            disabled={props.item.index === props.filter}
+            disabled={props.item.id === props.filter}
             onPress={()=>{
-                props.setPosts(props.posts.filter(item=>{
-                  return item.index !== props.item.index
-                }));
-                if (props.filter === props.item.index) {
-                  props.setFilter(-2);
-                }}
-              }
+                LayoutAnimation.configureNext({
+                  duration : 500,
+                  update: {type : 'linear'}
+                });
+                setIsExist(false);
+                setTimeout(()=>{
+                  props.setPosts(props.posts.filter(item=>{
+                    return item.id !== props.item.id
+                  }));
+                  if (props.filter === props.item.id) {
+                    props.setFilter(-2);
+                  }}, 500);
+              }}
             style={{
                 margin : 5,
                 transform : [{
@@ -150,7 +159,6 @@ const Post = React.forwardRef((props, ref) => {
 
 const styles = StyleSheet.create({
   nestedContainer: {
-    marginTop: 7,
     width: '90%',
     backgroundColor: '#1f1f1f',
     justifyContent: 'space-between',
