@@ -10,33 +10,32 @@ import { format } from "date-fns";
 
 const Post = React.forwardRef((props, ref) => {
 
+  const titleContainerRef = useRef(null);
   const ownref = useRef(null);
   const ownheight = useRef(new Animated.Value(0)).current;
   const iconRotation = useRef(new Animated.Value(0)).current;
   const ownOpacity = useRef(new Animated.Value(0)).current;
   const [isExist, setIsExist] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const onPressButton = (e)=>{
-    if (props.filter !== props.item.id) { 
+    if (!isExpanded) {
       Animated.timing(iconRotation,
         {
           toValue : -180,
           duration : 300,
           useNativeDriver: true
         }).start();
-      Animated.timing(
-        ownheight,
-        {
-          toValue : Dimensions.get('window').height - 178,
-          duration: 300,
-          useNativeDriver : false
-        }
-      ).start(()=>{
-        props.setFilter(props.index);
+      LayoutAnimation.configureNext({
+        duration : 300,
+        update: {type : 'linear'}
       });
-      ownref.current.measureLayout(props.scrollRef.current, (x, y)=>{
-        props.scrollRef.current.scrollTo({y});
-      });
+      setIsExpanded(true);
+      props.setFilter(props.item.id);
+      setTimeout(()=>ownref.current.measureLayout(props.scrollRef.current.getNativeScrollRef(), (x, y)=>{
+        console.log({'offset' : y});
+        props.scrollRef.current.getNativeScrollRef().scrollTo({y});
+      }), 300);
     }
     else {
       Animated.timing(iconRotation,
@@ -45,16 +44,22 @@ const Post = React.forwardRef((props, ref) => {
           duration : 300,
           useNativeDriver: true
         }).start();
-      Animated.timing(
-        ownheight,
-        {
-          toValue : 0,
-          duration: 300,
-          useNativeDriver : false
-        }
-      ).start(()=>{
-        props.setFilter(-2);
+      // Animated.timing(
+      //   ownheight,
+      //   {
+      //     toValue : 0,
+      //     duration: 300,
+      //     useNativeDriver : false
+      //   }
+      // ).start(()=>{
+      //   props.setFilter(null);
+      // });
+      LayoutAnimation.configureNext({
+        duration : 300,
+        update: {type : 'linear'}
       });
+      setIsExpanded(false);
+      props.setFilter(null)
     };
   }
 
@@ -71,11 +76,11 @@ const Post = React.forwardRef((props, ref) => {
   return (
       <Animated.View ref={ownref} style={{...styles.nestedContainer,
           opacity : ownOpacity,
-          height : isExist ? undefined : 0,
+          height : isExist ? (isExpanded ? Dimensions.get('window').height - 35 : undefined ) : 0,
           marginBottom : isExist ? 7 : 0,
         }}>
-        <View style={{flex : 1}}>
-        <View style={styles.titleContainer}>
+        <View>
+        <View ref={titleContainerRef} style={styles.titleContainer}>
           <IconButton
           onPress={async()=>{await Linking.openURL(props.item.link);}}
               style={{
@@ -139,7 +144,7 @@ const Post = React.forwardRef((props, ref) => {
                     return item.id !== props.item.id
                   }));
                   if (props.filter === props.item.id) {
-                    props.setFilter(-2);
+                    props.setFilter(null);
                   }}, 500);
               }}
             style={{
@@ -159,7 +164,7 @@ const Post = React.forwardRef((props, ref) => {
 
 const styles = StyleSheet.create({
   nestedContainer: {
-    width: '90%',
+    width : Dimensions.get('window').width - 20,
     backgroundColor: '#1f1f1f',
     justifyContent: 'space-between',
     borderRadius: 25
