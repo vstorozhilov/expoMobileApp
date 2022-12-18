@@ -4,25 +4,30 @@ import { IconComponentProvider } from "@react-native-material/core";
 import { useRef, useState, useEffect } from 'react';
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Post from './components/Post';
-import { Text } from 'react-native';
+import { Text, ActivityIndicator } from 'react-native';
 
 export default function App() {
 
+  const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState(null);
   const [posts, setPosts] = useState([]);
   const scrollRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const getNews = async ()=> {
-    let response = await fetch('http://82.146.37.120:8080/documents?period=24');
+    setIsLoading(true);
+    let response = await fetch('http://82.146.37.120:8080/documents?period=1');
     let JSresponse = await response.json();
+    setIsLoading(false);
 
-    setPosts(JSresponse.map((item, index)=>({title : item.title,
+    setPosts(prev => prev.concat(JSresponse.map((item, index)=>({title : item.title,
       link : item.link,
       published : item.published,
       summary : item.ds_insight.insight,
       repost_cnt : item.repost_cnt,
-      id : item._id
-    })).slice(0, 5));
+      id : index
+    })).slice(5 * offset, 5 * offset + 5)));
+    setOffset(prev=>prev + 1); 
   };
 
   useEffect(()=>{
@@ -38,6 +43,7 @@ export default function App() {
         alignItems: 'center'}}>
         {posts.length ?
             <FlatList
+            onEndReached={getNews}
             scrollEnabled={filter !== null ? false : true}
             ref={scrollRef}
             contentContainerStyle={{
@@ -50,7 +56,8 @@ export default function App() {
               )}
             />
         :
-         <Text style={{paddingTop: 100, fontSize : 15, color : 'white'}}>Пожалуйста, подождите. Новости уже загружаются</Text>}
+        <Text style={{paddingTop: 100, fontSize : 15, color : 'white'}}>Пожалуйста, подождите. Новости уже загружаются</Text>}
+        {isLoading ? <ActivityIndicator/> : null}
     </View>
     </IconComponentProvider>
   );
