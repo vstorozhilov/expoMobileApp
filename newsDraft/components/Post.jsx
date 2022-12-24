@@ -69,7 +69,7 @@ const Post = React.forwardRef((props, ref) => {
         toValue : 1,
         duration : 500,
         useNativeDriver: true,
-        delay: 500 * props.index
+        delay: (props.posts.length > 5 ? 0 : 500 * props.index)
       }).start();
   }, []);
 
