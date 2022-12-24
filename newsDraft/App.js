@@ -25,7 +25,7 @@ export default function App() {
     setPosts(prev => prev.concat(JSresponse.map(item=>({title : item.title,
       link : item.link,
       published : item.published,
-      summary : item.ds_insight.insight,
+      summary : item.summary,
       repost_cnt : item.repost_cnt,
       id : (Math.random() + 1).toString(36)
     })).slice(5 * offset, 5 * offset + 5)));
