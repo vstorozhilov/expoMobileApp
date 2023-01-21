@@ -11,7 +11,6 @@ import { format } from "date-fns";
 const Post = React.forwardRef((props, ref) => {
 
   const titleContainerRef = useRef(null);
-  const ownref = useRef(null);
   const ownheight = useRef(new Animated.Value(0)).current;
   const iconRotation = useRef(new Animated.Value(0)).current;
   const ownOpacity = useRef(new Animated.Value(0)).current;
@@ -32,8 +31,7 @@ const Post = React.forwardRef((props, ref) => {
       });
       setIsExpanded(true);
       props.setFilter(props.item.id);
-      setTimeout(()=>ownref.current.measureLayout(props.scrollRef.current.getNativeScrollRef(), (x, y)=>{
-        console.log({'offset' : y});
+      setTimeout(()=>ref.current.measureLayout(props.scrollRef.current.getNativeScrollRef(), (x, y)=>{
         props.scrollRef.current.getNativeScrollRef().scrollTo({y});
       }), 300);
     }
@@ -74,7 +72,7 @@ const Post = React.forwardRef((props, ref) => {
   }, []);
 
   return (
-      <Animated.View ref={ownref} style={{...styles.nestedContainer,
+      <Animated.View ref={ref} style={{...styles.nestedContainer,
           opacity : ownOpacity,
           height : isExist ? (isExpanded ? Dimensions.get('window').height - 35 : undefined ) : 0,
           marginBottom : isExist ? 7 : 0,
