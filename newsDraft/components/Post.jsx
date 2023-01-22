@@ -10,6 +10,7 @@ import { format } from "date-fns";
 
 const Post = React.forwardRef((props, ref) => {
 
+  const ownref = useRef()
   const titleContainerRef = useRef(null);
   const ownheight = useRef(new Animated.Value(0)).current;
   const iconRotation = useRef(new Animated.Value(0)).current;
@@ -31,7 +32,7 @@ const Post = React.forwardRef((props, ref) => {
       });
       setIsExpanded(true);
       props.setFilter(props.item.id);
-      setTimeout(()=>ref.current.measureLayout(props.scrollRef.current.getNativeScrollRef(), (x, y)=>{
+      setTimeout(()=>ownref.current.measureLayout(props.scrollRef.current.getNativeScrollRef(), (x, y)=>{
         props.scrollRef.current.getNativeScrollRef().scrollTo({y});
       }), 300);
     }
@@ -67,12 +68,12 @@ const Post = React.forwardRef((props, ref) => {
         toValue : 1,
         duration : 500,
         useNativeDriver: true,
-        delay: (props.posts.length > 5 ? 0 : 500 * props.index)
+        delay: (props.posts.length > 6 ? 0 : 500 * props.index)
       }).start();
   }, []);
 
   return (
-      <Animated.View ref={ref} style={{...styles.nestedContainer,
+      <Animated.View onLayout={props.onLayout} ref={ownref} style={{...styles.nestedContainer,
           opacity : ownOpacity,
           height : isExist ? (isExpanded ? Dimensions.get('window').height - 35 : undefined ) : 0,
           marginBottom : isExist ? 7 : 0,
