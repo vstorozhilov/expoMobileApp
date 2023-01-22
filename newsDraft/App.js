@@ -1,7 +1,7 @@
 import { ScrollView, View, VirtualizedList, StatusBar, Dimensions} from 'react-native';
 import { FlatList } from 'react-native-bidirectional-infinite-scroll'
 import { IconComponentProvider } from "@react-native-material/core";
-import { useRef, useState, useEffect, createRef } from 'react';
+import { useRef, useState, useEffect, createRef, useLayoutEffect } from 'react';
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Post from './components/Post';
 import { Text, ActivityIndicator } from 'react-native';
@@ -9,19 +9,25 @@ import { Text, ActivityIndicator } from 'react-native';
 var news = [];
 var newsRefs = new Map();
 var windowHeight = Dimensions.get('window').height;
+var topAddedNews;
 var prevWasLoaded = false;
+
+var heightToScroll = 0;
 
 export default function App() {
 
   const [offset, setOffset] = useState(0);
   const [filter, setFilter] = useState(null);
-  const [posts, setPosts] = useState(['blank']);
+  const [posts, setPosts] = useState([]);
   const scrollRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
   const [blankHeight, setBlankHeight] = useState(0);
+  const [enabled, setEnabled] = useState(true);
 
   const effect = async () => {
+    // console.log('effect');
     setIsLoading(true);
+  
     let response = await fetch('http://82.146.37.120:8080/documents?limit=50');
     let JSresponse = await response.json();
     news = [...JSresponse];
@@ -38,13 +44,17 @@ export default function App() {
   }
 
   const getNewsPrev = async () => {
+    setEnabled(false);
     setIsLoading(true);
     setTimeout(()=>{
       setPosts(prev => {
         prevWasLoaded = true;
         let shortenedPrev;
         shortenedPrev = prev.slice(0, prev.length - 5);
-        return news.slice(5 * (offset - 1), (5 * offset)).map(item=>({
+        // topAddedNews = news.slice(5 * (offset - 1), (5 * offset)).map(item=>item._id);
+        prev.slice(prev.length - 5, ).forEach((item)=>{newsRefs.delete(item.id)})
+        // console.log(offset)
+        return news.slice(5 * (offset - 3), (5 * (offset - 2))).map(item=>({
           title : item.title,
           link : item.link,
           published : item.published,
@@ -53,23 +63,25 @@ export default function App() {
           id : item._id
         })).concat(shortenedPrev);
       });
-      setOffset(prev=>prev - 1);
       setIsLoading(false);
+      setOffset(prev=>prev - 1);
     }, 2000);
   }
 
   const getNewsNext = async ()=> {
-    console.log('Some amount of news was requested');
+    // console.log('Some amount of news was requested');
     setIsLoading(true);
     setTimeout(()=>{
       if (offset > 1) {
-        let totalDeletedHeight = posts.slice(1, 6).map(item=>(newsRefs.get(item.id))).reduce((a, b)=>(a + b));
-        setBlankHeight(prev=>prev + totalDeletedHeight + 35);
+        // let totalDeletedHeight = posts.slice(1, 6).map(item=>(newsRefs.get(item.id))).reduce((a, b)=>(a + b));
+        // setBlankHeight(prev=>prev + totalDeletedHeight + 35);
+        posts.slice(0, 5).forEach(item=>{ newsRefs.delete(item.id) });
+        heightToScroll = posts.slice(5, 10).map(item=>newsRefs.get(item.id)).reduce((a, b)=>(a + b)) - windowHeight + 35;
       }
       setPosts(prev => {
         let shortenedPrev;
         if (offset > 1) {
-          shortenedPrev = [prev[0]].concat(prev.slice(6,));
+          shortenedPrev = prev.slice(5,);
         }
         else shortenedPrev = prev;
         return shortenedPrev.concat(news.slice(5 * offset, 5 * offset + 5).map(item=>({
@@ -88,21 +100,40 @@ export default function App() {
 
 
   useEffect(()=>{
-    if (offset == 0) effect();
-    if (prevWasLoaded == true) {
-      setBlankHeight(prev=>
-        prev - newsRefs.slice(0, 5).reduce((a, b)=>(a + b)));
+    console.log('effect');
+    if (offset == 0 && !posts.length) effect();
+    if (heightToScroll) {
+      console.log('scroll down')
+      scrollRef.current.getNativeScrollRef().scrollTo({y : heightToScroll, animated : false});
+      heightToScroll = 0;
     }
-    // if (offset > 1) scrollRef.current.scrollToOffset({
-    //   offset : 0,
-    //   animated : true
-    // })
-    // console.log(posts.length);
+    // if (prevWasLoaded == true) {
+    //   setBlankHeight(
+    //     prev => prev - topAddedNews.map(id=>newsRefs.get(id)).reduce((a, b)=>(a + b))
+    //   );
+    //     prevWasLoaded = false;
+    // }
+    if (prevWasLoaded == true) {
+      console.log('scroll top');
+      //console.log(posts.slice(0, 4));
+      // console.log(posts.slice(0, 5).map(item=>newsRefs.get(item.id)));
+      let hh = posts.slice(0, 5).map(item=>newsRefs.get(item.id)).reduce((a, b)=>(a + b), 0) + 35;
+      console.log(`scrolled by : ${hh}`);
+      scrollRef.current.getNativeScrollRef().scrollTo({
+        y : hh,
+        animated : false
+      });
+      prevWasLoaded = false;
+    }
+    setEnabled(true);
+    //console.log(offset);
   }, [posts]);
 
   return (
     <IconComponentProvider IconComponent={MaterialCommunityIcons}>
-    <View  style={{
+    <View
+    pointerEvents={enabled ? 'auto' : 'none'}
+    style={{
         flex : 1,
         justifyContent : 'center',
         backgroundColor : 'black'}}>
@@ -124,7 +155,11 @@ export default function App() {
             <FlatList
             initialNumToRender={30}
             refreshing
-            keyExtractor={item=>item.id}
+            keyExtractor={(item, index)=>{
+              // if (index == 0) return 'top_blank';
+              // else
+              return item.id;
+            }}
             // onEndReached={getNewsNext}
             scrollEnabled={filter !== null ? false : true}
             ref={scrollRef}
@@ -137,19 +172,32 @@ export default function App() {
             data={posts}
             onScroll={
               (e)=>{
-                if (e.nativeEvent.contentOffset.y + windowHeight + 1 >= e.nativeEvent.contentSize.height) {
-                  console.log('reached');
+                if (e.nativeEvent.contentOffset.y + windowHeight + 1 >= e.nativeEvent.contentSize.height  && e.nativeEvent.velocity.y > 0) {
+                  // console.log('reached');
+                  setEnabled(false);
                   getNewsNext();
                 }
+                if (e.nativeEvent.contentOffset.y == 0 && e.nativeEvent.velocity.y < 0) {
+                  // console.log('reached');
+                  setEnabled(false);
+                  getNewsPrev();
+                }
+                // else if (e.nativeEvent.contentOffset.y <= blankHeight && e.nativeEvent.velocity.y < 0) {
+                //   console.log('opoopiegr');
+                //   scrollRef.current.getNativeScrollRef().scrollTo({
+                //     x : 0,
+                //     y : blankHeight,
+                //     animated : false
+                //   });
+                //   setEnabled(false);
+                //   getNewsPrev();
+                // }
               }
             }
             renderItem={({ item, index })=>{
-              // let itemRef = createRef();
-              // if (!newsRefs.get(item.id)) newsRefs.set(item.id, itemRef);
-              if (item == 'blank') return <View key='top_blank' style={{height : blankHeight}}/>
-              else return <Post
-                key={item.id}
-                // ref={newsRefs.get(item.id)[0]}
+              // if (item == 'blank') return <View style={{height : blankHeight}}/>
+              // else
+              return <Post
                 scrollRef={scrollRef}
                 setPosts={setPosts}
                 posts={posts}
@@ -159,6 +207,7 @@ export default function App() {
                 index={index}
                 onLayout={
                   (layout, __)=>{
+                    console.log('prp');
                     newsRefs.set(item.id, layout.nativeEvent.layout.height);
                   }
                 }/>

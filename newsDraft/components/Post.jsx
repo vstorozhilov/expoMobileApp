@@ -14,7 +14,7 @@ const Post = React.forwardRef((props, ref) => {
   const titleContainerRef = useRef(null);
   const ownheight = useRef(new Animated.Value(0)).current;
   const iconRotation = useRef(new Animated.Value(0)).current;
-  const ownOpacity = useRef(new Animated.Value(0)).current;
+  const ownOpacity = useRef(new Animated.Value(1)).current;
   const [isExist, setIsExist] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -62,15 +62,15 @@ const Post = React.forwardRef((props, ref) => {
     };
   }
 
-  useEffect(()=>{
-    Animated.timing(ownOpacity,
-      {
-        toValue : 1,
-        duration : 500,
-        useNativeDriver: true,
-        delay: (props.posts.length > 6 ? 0 : 500 * props.index)
-      }).start();
-  }, []);
+  // useEffect(()=>{
+  //   Animated.timing(ownOpacity,
+  //     {
+  //       toValue : 1,
+  //       duration : 500,
+  //       useNativeDriver: true,
+  //       delay: (props.posts.length > 6 ? 0 : 500 * props.index)
+  //     }).start();
+  // }, []);
 
   return (
       <Animated.View onLayout={props.onLayout} ref={ownref} style={{...styles.nestedContainer,
