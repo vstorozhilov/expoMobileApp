@@ -9,8 +9,8 @@ import { Text, ActivityIndicator } from 'react-native';
 var news = [];
 var newsRefs = new Map();
 var windowHeight = Dimensions.get('window').height;
-var topAddedNews;
 var prevWasLoaded = false;
+var nextWasLoaded = false;
 
 var heightToScroll = 0;
 
@@ -73,8 +73,7 @@ export default function App() {
     setIsLoading(true);
     setTimeout(()=>{
       if (offset > 1) {
-        // let totalDeletedHeight = posts.slice(1, 6).map(item=>(newsRefs.get(item.id))).reduce((a, b)=>(a + b));
-        // setBlankHeight(prev=>prev + totalDeletedHeight + 35);
+        nextWasLoaded = true;
         posts.slice(0, 5).forEach(item=>{ newsRefs.delete(item.id) });
         heightToScroll = posts.slice(5, 10).map(item=>newsRefs.get(item.id)).reduce((a, b)=>(a + b)) - windowHeight + 35;
       }
@@ -101,32 +100,18 @@ export default function App() {
 
   useEffect(()=>{
     console.log('effect');
-    if (offset == 0 && !posts.length) effect();
-    if (heightToScroll) {
-      console.log('scroll down')
-      scrollRef.current.getNativeScrollRef().scrollTo({y : heightToScroll, animated : false});
+    if (!posts.length) effect();
+    if (nextWasLoaded) {
+      scrollRef.current.scrollToOffset({offset : heightToScroll, animated : false});
       heightToScroll = 0;
+      nextWasLoaded = false;
     }
-    // if (prevWasLoaded == true) {
-    //   setBlankHeight(
-    //     prev => prev - topAddedNews.map(id=>newsRefs.get(id)).reduce((a, b)=>(a + b))
-    //   );
-    //     prevWasLoaded = false;
-    // }
     if (prevWasLoaded == true) {
       console.log('scroll top');
-      //console.log(posts.slice(0, 4));
-      // console.log(posts.slice(0, 5).map(item=>newsRefs.get(item.id)));
-      let hh = posts.slice(0, 5).map(item=>newsRefs.get(item.id)).reduce((a, b)=>(a + b), 0) + 35;
-      console.log(`scrolled by : ${hh}`);
-      scrollRef.current.getNativeScrollRef().scrollTo({
-        y : hh,
-        animated : false
-      });
+      scrollRef.current.scrollToIndex({index : 5, animated : false})
       prevWasLoaded = false;
     }
     setEnabled(true);
-    //console.log(offset);
   }, [posts]);
 
   return (
@@ -173,30 +158,16 @@ export default function App() {
             onScroll={
               (e)=>{
                 if (e.nativeEvent.contentOffset.y + windowHeight + 1 >= e.nativeEvent.contentSize.height  && e.nativeEvent.velocity.y > 0) {
-                  // console.log('reached');
                   setEnabled(false);
                   getNewsNext();
                 }
                 if (e.nativeEvent.contentOffset.y == 0 && e.nativeEvent.velocity.y < 0) {
-                  // console.log('reached');
                   setEnabled(false);
                   getNewsPrev();
                 }
-                // else if (e.nativeEvent.contentOffset.y <= blankHeight && e.nativeEvent.velocity.y < 0) {
-                //   console.log('opoopiegr');
-                //   scrollRef.current.getNativeScrollRef().scrollTo({
-                //     x : 0,
-                //     y : blankHeight,
-                //     animated : false
-                //   });
-                //   setEnabled(false);
-                //   getNewsPrev();
-                // }
               }
             }
             renderItem={({ item, index })=>{
-              // if (item == 'blank') return <View style={{height : blankHeight}}/>
-              // else
               return <Post
                 scrollRef={scrollRef}
                 setPosts={setPosts}
@@ -207,7 +178,6 @@ export default function App() {
                 index={index}
                 onLayout={
                   (layout, __)=>{
-                    console.log('prp');
                     newsRefs.set(item.id, layout.nativeEvent.layout.height);
                   }
                 }/>
