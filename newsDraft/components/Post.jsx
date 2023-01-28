@@ -1,12 +1,12 @@
 
 import { IconButton } from "@react-native-material/core";
-import { StyleSheet, Text, View, Animated} from 'react-native';
+import { StyleSheet, Text, View, Animated, ScrollView} from 'react-native';
 import { Pressable} from "@react-native-material/core";
 import React, { useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/AntDesign';
 import {CardAction, CardButton} from 'react-native-material-cards';
 import { Dimensions, Linking, LayoutAnimation } from 'react-native';
-import { format } from "date-fns";
+import { format, isExists } from "date-fns";
 
 const Post = React.forwardRef((props, ref) => {
 
@@ -24,16 +24,18 @@ const Post = React.forwardRef((props, ref) => {
         {
           toValue : -180,
           duration : 300,
-          useNativeDriver: true
+          useNativeDriver: true,
+          delay : 0
         }).start();
       LayoutAnimation.configureNext({
         duration : 300,
         update: {type : 'linear'}
       });
       setIsExpanded(true);
-      props.setFilter(props.item.id);
+      props.scrollRef.current.setNativeProps({ scrollEnabled: false });
+      // props.setFilter(props.item.id);
       setTimeout(()=>ownref.current.measureLayout(props.scrollRef.current.getNativeScrollRef(), (x, y)=>{
-        props.scrollRef.current.getNativeScrollRef().scrollTo({y});
+        props.scrollRef.current.scrollToOffset({offset : y, animated : true});
       }), 300);
     }
     else {
@@ -43,108 +45,95 @@ const Post = React.forwardRef((props, ref) => {
           duration : 300,
           useNativeDriver: true
         }).start();
-      // Animated.timing(
-      //   ownheight,
-      //   {
-      //     toValue : 0,
-      //     duration: 300,
-      //     useNativeDriver : false
-      //   }
-      // ).start(()=>{
-      //   props.setFilter(null);
-      // });
       LayoutAnimation.configureNext({
         duration : 300,
         update: {type : 'linear'}
       });
       setIsExpanded(false);
-      props.setFilter(null)
+      props.scrollRef.current.setNativeProps({ scrollEnabled: true })
+      // props.setFilter(null)
     };
   }
 
   // useEffect(()=>{
-  //   Animated.timing(ownOpacity,
-  //     {
-  //       toValue : 1,
-  //       duration : 500,
-  //       useNativeDriver: true,
-  //       delay: (props.posts.length > 6 ? 0 : 500 * props.index)
-  //     }).start();
-  // }, []);
+  //   // Animated.timing(ownOpacity,
+  //   //   {
+  //   //     toValue : 1,
+  //   //     duration : 500,
+  //   //     useNativeDriver: true,
+  //   //     delay: (props.posts.length > 6 ? 0 : 500 * props.index)
+  //   //   }).start();
+  //   console.log(isExpanded);
+  // });
 
   return (
       <Animated.View onLayout={props.onLayout} ref={ownref} style={{...styles.nestedContainer,
           opacity : ownOpacity,
-          height : isExist ? (isExpanded ? Dimensions.get('window').height - 35 : undefined ) : 0,
+          height : isExist ? (isExpanded ? Dimensions.get('window').height : undefined ) : 0,
           marginBottom : isExist ? 7 : 0,
         }}>
         <View>
-        <View ref={titleContainerRef} style={styles.titleContainer}>
-          <IconButton
-          onPress={async()=>{await Linking.openURL(props.item.link);}}
-              style={{
-              backgroundColor : 'blue',
-              borderRadius : 10
-            }}
-            icon={props => <Icon name="export" {...props} />}
-            color="white"
-          />
-          <Text style={{
-          flex : 1,
-          color : 'white',
-          fontSize : 15,
-          paddingLeft: 10}}>{props.item.title}</Text>
-        </View>
-        <View style={styles.mainContainer}>
-          <View style={{flexDirection : 'row'}}>
-            <Text style={{color : 'white', marginRight : 10}}>{format(new Date(props.item.published), "dd.MM.yy")}</Text>
-            <Text style={{color : 'yellow'}}>{props.item.link.split('/')[2]}</Text>
-          </View>
-          <Pressable onPress={onPressButton}
-          pressEffect="ripple"
-          pressEffectColor='white'>
-          <Animated.View style={{
-            transform : [{rotateZ :
-              iconRotation.interpolate(
-                {
-                  inputRange: [-180, 0],
-                  outputRange: ['-180deg', '0deg']
-                }
-              )}],
-            borderRadius : 15
-          }}>
-            <Icon color="white"size={30}  name="down"/>
-          </Animated.View>
-          </Pressable>
-        </View>
-        <Animated.ScrollView style={{height : ownheight}}>
+          <View ref={titleContainerRef} style={styles.titleContainer}>
+            <IconButton
+            onPress={async()=>{await Linking.openURL(props.item.link);}}
+                style={{
+                backgroundColor : 'blue',
+                borderRadius : 10
+              }}
+              icon={props => <Icon name="export" {...props} />}
+              color="white"
+            />
             <Text style={{
-                color : 'white',
-                textAlign : 'justify',
-                padding : 10
-              }}>
-              {props.item.summary} 
-              </Text>
-        </Animated.ScrollView>
+            flex : 1,
+            color : 'white',
+            fontSize : 15,
+            paddingLeft: 10}}>{props.item.title}</Text>
+          </View>
+          <View style={styles.mainContainer}>
+            <View style={{flexDirection : 'row'}}>
+              <Text style={{color : 'white', marginRight : 10}}>{format(new Date(props.item.published), "dd.MM.yy")}</Text>
+              <Text style={{color : 'yellow'}}>{props.item.link.split('/')[2]}</Text>
+            </View>
+            <Pressable onPress={onPressButton}
+            pressEffect="ripple"
+            pressEffectColor='white'>
+            <Animated.View style={{
+              transform : [{rotateZ :
+                iconRotation.interpolate(
+                  {
+                    inputRange: [-180, 0],
+                    outputRange: ['-180deg', '0deg']
+                  }
+                )}],
+              borderRadius : 15
+            }}>
+              <Icon color="white"size={30}  name="down"/>
+            </Animated.View>
+            </Pressable>
+          </View>
+          <ScrollView style={{height : isExpanded ? 500 : 0}}>
+              <Text style={{
+                  color : 'white',
+                  textAlign : 'justify',
+                  padding : 10
+                }}>
+                {props.item.summary} 
+                </Text>
+          </ScrollView>
         </View>
         <View>
         <CardAction
           inColumn={false}>
             <IconButton
-            disabled={props.item.id === props.filter}
+            style={{height : isExist ? undefined : 0}}
+            disabled={isExpanded}
             onPress={()=>{
                 LayoutAnimation.configureNext({
                   duration : 500,
                   update: {type : 'linear'}
                 });
                 setIsExist(false);
-                setTimeout(()=>{
-                  props.setPosts(props.posts.filter(item=>{
-                    return item.id !== props.item.id
-                  }));
-                  if (props.filter === props.item.id) {
-                    props.setFilter(null);
-                  }}, 500);
+                props.newsHeights.set(props.item.id, 0);
               }}
             style={{
                 margin : 5,
@@ -169,6 +158,7 @@ const styles = StyleSheet.create({
     borderRadius: 25
   },
   titleContainer : {
+    height : 65,
     paddingLeft : 15,
     paddingTop: 10,
     flexDirection : 'row',

@@ -1,118 +1,199 @@
-import { ScrollView, View, VirtualizedList, StatusBar, Dimensions} from 'react-native';
-import { FlatList } from 'react-native-bidirectional-infinite-scroll'
+import { ScrollView, View, VirtualizedList, StatusBar, Dimensions, Pressable, Text, FlatList} from 'react-native';
+//import { FlatList } from 'react-native-bidirectional-infinite-scroll'
 import { IconComponentProvider } from "@react-native-material/core";
 import { useRef, useState, useEffect, createRef, useLayoutEffect } from 'react';
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Post from './components/Post';
-import { Text, ActivityIndicator } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 
-var news = [];
-var newsRefs = new Map();
+var reference_id = null;
+var newsHeights = new Map();
 var windowHeight = Dimensions.get('window').height;
 var prevWasLoaded = false;
 var nextWasLoaded = false;
-
 var heightToScroll = 0;
+var bunchSize = 10;
+var offset = 0;
 
 export default function App() {
 
-  const [offset, setOffset] = useState(0);
-  const [filter, setFilter] = useState(null);
   const [posts, setPosts] = useState([]);
   const scrollRef = useRef(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [blankHeight, setBlankHeight] = useState(0);
+  const [isNextLoading, setIsNextLoading] = useState(false);
+  const [isPrevLoading, setIsPrevLoading] = useState(false);
   const [enabled, setEnabled] = useState(true);
 
-  const effect = async () => {
-    // console.log('effect');
-    setIsLoading(true);
-  
-    let response = await fetch('http://82.146.37.120:8080/documents?limit=50');
-    let JSresponse = await response.json();
-    news = [...JSresponse];
+  const getFirstNewsBunch = async () => {
+    setEnabled(false);
+    setIsNextLoading(true);
 
-    setIsLoading(false);
-    setPosts(prev => prev.concat(news.slice(5 * offset, 5 * offset + 5).map(item=>({title : item.title,
-      link : item.link,
-      published : item.published,
-      summary : item.summary,
-      repost_cnt : item.repost_cnt,
-      id : item._id
-    }))));
-    setOffset(prev=>prev + 1);
+    let response = await fetch(`http://82.146.37.120:8080/documents?limit=${bunchSize}`);
+    let json = await response.json();
+    reference_id = json[0]['_id']
+
+    setIsNextLoading(false);
+
+    if (json.length == bunchSize) {
+      setPosts(prev => prev.concat(json.map(item=>({title : item.title,
+        link : item.link,
+        published : item.published,
+        summary : item.summary,
+        repost_cnt : item.repost_cnt,
+        id : item._id
+      }))));
+      offset++;
+    }
   }
 
   const getNewsPrev = async () => {
     setEnabled(false);
-    setIsLoading(true);
-    setTimeout(()=>{
+    setIsPrevLoading(true);
+    // checks if a callback for newer news was called very first
+    let response = await fetch(`http://82.146.37.120:8080/documents?offset=${Math.abs(posts.length == bunchSize ? 0 : offset - 3) * bunchSize}&limit=${bunchSize}&reference_id=${reference_id}&newer=${(posts.length == bunchSize ? true : offset < 3) ? true : false}`);
+    let json = await response.json();
+    setIsPrevLoading(false);
+    console.log(json.length);
+    if (json.length == bunchSize) {
+      prevWasLoaded = true;
       setPosts(prev => {
-        prevWasLoaded = true;
-        let shortenedPrev;
-        shortenedPrev = prev.slice(0, prev.length - 5);
-        // topAddedNews = news.slice(5 * (offset - 1), (5 * offset)).map(item=>item._id);
-        prev.slice(prev.length - 5, ).forEach((item)=>{newsRefs.delete(item.id)})
-        // console.log(offset)
-        return news.slice(5 * (offset - 3), (5 * (offset - 2))).map(item=>({
+        // checks if a callback for newer news was called very first
+        if (prev.length == 2 * bunchSize) {
+          prev.slice(prev.length - bunchSize, ).forEach((item)=>{newsHeights.delete(item.id)})
+          prev = prev.slice(0, prev.length - bunchSize);
+          offset--;
+        }
+        return json.map(item=>({
           title : item.title,
           link : item.link,
           published : item.published,
-          summary : item.ds_insight.insight,
+          summary : item.summary,
           repost_cnt : item.repost_cnt,
           id : item._id
-        })).concat(shortenedPrev);
+        })).concat(prev);
       });
-      setIsLoading(false);
-      setOffset(prev=>prev - 1);
-    }, 2000);
+    }
+    else {
+      setEnabled(true);
+    }
   }
 
   const getNewsNext = async ()=> {
-    // console.log('Some amount of news was requested');
-    setIsLoading(true);
-    setTimeout(()=>{
-      if (offset > 1) {
+    setIsNextLoading(true);
+    setEnabled(false);
+
+    let response = await fetch(`http://82.146.37.120:8080/documents?offset=${Math.abs(offset) * bunchSize}&limit=${bunchSize}&reference_id=${reference_id}&newer=${offset < 0 ? true : false}`);
+    let json = await response.json();
+    setIsNextLoading(false);
+
+    if (json.length == bunchSize) {
+      if (posts.length == 2 * bunchSize) {
         nextWasLoaded = true;
-        posts.slice(0, 5).forEach(item=>{ newsRefs.delete(item.id) });
-        heightToScroll = posts.slice(5, 10).map(item=>newsRefs.get(item.id)).reduce((a, b)=>(a + b)) - windowHeight + 35;
+        posts.slice(0, bunchSize).forEach(item=>{ newsHeights.delete(item.id) });
+        heightToScroll = posts.slice(bunchSize, 2 * bunchSize).map(item=>newsHeights.get(item.id)).reduce((a, b)=>(a + b)) - windowHeight + 7 * bunchSize + 2 * 67;
       }
       setPosts(prev => {
-        let shortenedPrev;
-        if (offset > 1) {
-          shortenedPrev = prev.slice(5,);
+        if (posts.length == 2 * bunchSize) {
+          prev = prev.slice(bunchSize,);
         }
-        else shortenedPrev = prev;
-        return shortenedPrev.concat(news.slice(5 * offset, 5 * offset + 5).map(item=>({
+        return prev.concat(json.map(item=>({
           title : item.title,
           link : item.link,
           published : item.published,
           summary : item.ds_insight.insight,
           repost_cnt : item.repost_cnt,
           id : item._id
-        })));
-      });
-      setIsLoading(false);
-      setOffset(prev=>prev + 1);
-    }, 2000);
+        })))});
+      offset++;
+    }
+    else {
+      setEnabled(true);
+    }
   };
 
 
   useEffect(()=>{
-    console.log('effect');
-    if (!posts.length) effect();
+    // console.log(posts.length);
+    if (!posts.length) getFirstNewsBunch();
     if (nextWasLoaded) {
+      // console.log('scroll down')
       scrollRef.current.scrollToOffset({offset : heightToScroll, animated : false});
       heightToScroll = 0;
       nextWasLoaded = false;
     }
-    if (prevWasLoaded == true) {
+    if (prevWasLoaded) {
       console.log('scroll top');
-      scrollRef.current.scrollToIndex({index : 5, animated : false})
+      console.log(posts.length)
+      scrollRef.current.scrollToIndex({index : bunchSize, animated : false})
       prevWasLoaded = false;
     }
     setEnabled(true);
   }, [posts]);
+
+  // const FlatList_Header = () => {
+  //   return (
+  //     <Pressable style={{
+  //       borderRadius: 25,
+  //       height: 60,
+  //       width: Dimensions.get('window').width - 20,
+  //       backgroundColor: '#1f1f1f',
+  //       justifyContent: 'center',
+  //       alignItems: 'center',
+  //       marginBottom: 7
+  //     }}>
+ 
+  //       <Text style={{ fontSize: 15, color: 'white' }}> Загрузить новее </Text>
+ 
+  //     </Pressable>
+  //   );
+  // }
+
+  const FlatList_Header = () => {
+    return (
+      <Pressable style={{
+        borderRadius: 25,
+        height: 60,
+        width: Dimensions.get('window').width - 20,
+        backgroundColor: '#1f1f1f',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 7
+      }}
+      onPress={
+          ()=>{
+            console.log('pressed');
+            setEnabled(false);
+            getNewsPrev()
+          }
+        }>
+        {isPrevLoading ? <ActivityIndicator size="large" style={{}}/> :
+        <Text style={{ fontSize: 15, color: 'white' }}> Загрузить более новые </Text>}
+      </Pressable>
+    );
+  }
+
+  const FlatList_Footer = () => {
+    return (
+      <Pressable style={{
+        borderRadius: 25,
+        height: 60,
+        width: Dimensions.get('window').width - 20,
+        backgroundColor: '#1f1f1f',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 7
+      }}
+      onPress={
+          ()=>{
+            console.log('pressed');
+            setEnabled(false);
+            getNewsNext()
+          }
+        }>
+        {isNextLoading ? <ActivityIndicator size="large" style={{}}/> :
+        <Text style={{ fontSize: 15, color: 'white' }}> Загрузить более старые </Text>}
+      </Pressable>
+    );
+  }
 
   return (
     <IconComponentProvider IconComponent={MaterialCommunityIcons}>
@@ -122,71 +203,59 @@ export default function App() {
         flex : 1,
         justifyContent : 'center',
         backgroundColor : 'black'}}>
-          {/* <View style={{
-            height : 500,
-            backgroundColor : 'yellow'
-          }}>
-            <ScrollView style={{
-              flex : 1,
-              backgroundColor : 'yellow'
-            }}>
-              <View style={{
-                height: 100000,
-                backgroundColor : 'red'
-              }}>
-              </View>
-            </ScrollView>
-          </View> */}
+            {/* {isPrevLoading ? <ActivityIndicator size="large" style={{}}/> : null} */}
             <FlatList
-            initialNumToRender={30}
-            refreshing
+            ListHeaderComponent={
+              FlatList_Header
+            }
+            // ListHeaderComponentStyle={{
+            //   borderRadius: 25}}
+            ListFooterComponent={
+              FlatList_Footer
+            }
+            //initialNumToRender={30}
+            //refreshing
             keyExtractor={(item, index)=>{
-              // if (index == 0) return 'top_blank';
-              // else
               return item.id;
             }}
-            // onEndReached={getNewsNext}
-            scrollEnabled={filter !== null ? false : true}
             ref={scrollRef}
             contentContainerStyle={{
               justifyContent : 'flex-start',
               alignItems : 'center'
             }}
-            // getItemCount={(data)=>{return data.length}}
-            // getItem={(data, index)=>(data[index])}
             data={posts}
-            onScroll={
-              (e)=>{
-                if (e.nativeEvent.contentOffset.y + windowHeight + 1 >= e.nativeEvent.contentSize.height  && e.nativeEvent.velocity.y > 0) {
-                  setEnabled(false);
-                  getNewsNext();
-                }
-                if (e.nativeEvent.contentOffset.y == 0 && e.nativeEvent.velocity.y < 0) {
-                  setEnabled(false);
-                  getNewsPrev();
-                }
-              }
-            }
+            // onScroll={
+            //   (e)=>{
+            //     if (e.nativeEvent.contentOffset.y + windowHeight + 1 >= e.nativeEvent.contentSize.height  && e.nativeEvent.velocity.y > 0) {
+            //       setEnabled(false);
+            //       getNewsNext();
+            //     }
+            //     if (e.nativeEvent.contentOffset.y == 0 && e.nativeEvent.velocity.y < 0) {
+            //       setEnabled(false);
+            //       getNewsPrev();
+            //     }
+            //   }
+            // }
+            onScrollToIndexFailed={info => {
+              scrollRef.current.scrollToIndex({index : bunchSize - 2,
+                animated : false,
+                viewPosition : 1})
+            }}
             renderItem={({ item, index })=>{
               return <Post
                 scrollRef={scrollRef}
                 setPosts={setPosts}
-                posts={posts}
-                setFilter={setFilter}
+                newsHeights={newsHeights}
                 item={item}
-                filter={filter}
                 index={index}
                 onLayout={
                   (layout, __)=>{
-                    newsRefs.set(item.id, layout.nativeEvent.layout.height);
+                    newsHeights.set(item.id, layout.nativeEvent.layout.height);
                   }
                 }/>
             }}
-            FooterLoadingIndicator={()=>
-              <ActivityIndicator size="large" style={{}}/>
-            }
             />
-        {isLoading ? <ActivityIndicator size="large" style={{}}/> : null}
+        {/* {isNextLoading ? <ActivityIndicator size="large" style={{}}/> : null} */}
     </View>
     </IconComponentProvider>
   );
