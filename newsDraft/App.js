@@ -1,4 +1,4 @@
-import { ScrollView, View, VirtualizedList, StatusBar, Dimensions, Pressable, Text, FlatList} from 'react-native';
+import { ScrollView, View, VirtualizedList, StatusBar, Dimensions, Pressable, Text, FlatList, UIManager} from 'react-native';
 //import { FlatList } from 'react-native-bidirectional-infinite-scroll'
 import { IconComponentProvider } from "@react-native-material/core";
 import { useRef, useState, useEffect, createRef, useLayoutEffect } from 'react';
@@ -89,7 +89,7 @@ export default function App() {
       if (posts.length == 2 * bunchSize) {
         nextWasLoaded = true;
         posts.slice(0, bunchSize).forEach(item=>{ newsHeights.delete(item.id) });
-        heightToScroll = posts.slice(bunchSize, 2 * bunchSize).map(item=>newsHeights.get(item.id)).reduce((a, b)=>(a + b)) - windowHeight + 7 * bunchSize + 2 * 67;
+        heightToScroll = posts.slice(bunchSize, 2 * bunchSize).map(item=>newsHeights.get(item.id)).reduce((a, b)=>{if (b > 0) b += 7; return a + b;}, 0) - windowHeight + 2 * 67;
       }
       setPosts(prev => {
         if (posts.length == 2 * bunchSize) {
@@ -99,7 +99,7 @@ export default function App() {
           title : item.title,
           link : item.link,
           published : item.published,
-          summary : item.ds_insight.insight,
+          summary : item.summary,
           repost_cnt : item.repost_cnt,
           id : item._id
         })))});
@@ -112,7 +112,7 @@ export default function App() {
 
 
   useEffect(()=>{
-    // console.log(posts.length);
+    // console.log(newsHeights);
     if (!posts.length) getFirstNewsBunch();
     if (nextWasLoaded) {
       // console.log('scroll down')
@@ -123,29 +123,11 @@ export default function App() {
     if (prevWasLoaded) {
       console.log('scroll top');
       console.log(posts.length)
-      scrollRef.current.scrollToIndex({index : bunchSize, animated : false})
+      scrollRef.current.scrollToOffset({offset : bunchSize * (154 + 7), animated : false});
       prevWasLoaded = false;
     }
     setEnabled(true);
   }, [posts]);
-
-  // const FlatList_Header = () => {
-  //   return (
-  //     <Pressable style={{
-  //       borderRadius: 25,
-  //       height: 60,
-  //       width: Dimensions.get('window').width - 20,
-  //       backgroundColor: '#1f1f1f',
-  //       justifyContent: 'center',
-  //       alignItems: 'center',
-  //       marginBottom: 7
-  //     }}>
- 
-  //       <Text style={{ fontSize: 15, color: 'white' }}> Загрузить новее </Text>
- 
-  //     </Pressable>
-  //   );
-  // }
 
   const FlatList_Header = () => {
     return (
@@ -203,18 +185,13 @@ export default function App() {
         flex : 1,
         justifyContent : 'center',
         backgroundColor : 'black'}}>
-            {/* {isPrevLoading ? <ActivityIndicator size="large" style={{}}/> : null} */}
             <FlatList
             ListHeaderComponent={
               FlatList_Header
             }
-            // ListHeaderComponentStyle={{
-            //   borderRadius: 25}}
             ListFooterComponent={
               FlatList_Footer
             }
-            //initialNumToRender={30}
-            //refreshing
             keyExtractor={(item, index)=>{
               return item.id;
             }}
@@ -224,18 +201,6 @@ export default function App() {
               alignItems : 'center'
             }}
             data={posts}
-            // onScroll={
-            //   (e)=>{
-            //     if (e.nativeEvent.contentOffset.y + windowHeight + 1 >= e.nativeEvent.contentSize.height  && e.nativeEvent.velocity.y > 0) {
-            //       setEnabled(false);
-            //       getNewsNext();
-            //     }
-            //     if (e.nativeEvent.contentOffset.y == 0 && e.nativeEvent.velocity.y < 0) {
-            //       setEnabled(false);
-            //       getNewsPrev();
-            //     }
-            //   }
-            // }
             onScrollToIndexFailed={info => {
               scrollRef.current.scrollToIndex({index : bunchSize - 2,
                 animated : false,
@@ -243,6 +208,7 @@ export default function App() {
             }}
             renderItem={({ item, index })=>{
               return <Post
+                bunchSize={bunchSize}
                 scrollRef={scrollRef}
                 setPosts={setPosts}
                 newsHeights={newsHeights}
@@ -255,7 +221,6 @@ export default function App() {
                 }/>
             }}
             />
-        {/* {isNextLoading ? <ActivityIndicator size="large" style={{}}/> : null} */}
     </View>
     </IconComponentProvider>
   );

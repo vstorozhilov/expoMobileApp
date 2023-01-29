@@ -1,4 +1,3 @@
-
 import { IconButton } from "@react-native-material/core";
 import { StyleSheet, Text, View, Animated, ScrollView} from 'react-native';
 import { Pressable} from "@react-native-material/core";
@@ -6,15 +5,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import Icon from 'react-native-vector-icons/AntDesign';
 import {CardAction, CardButton} from 'react-native-material-cards';
 import { Dimensions, Linking, LayoutAnimation } from 'react-native';
-import { format, isExists } from "date-fns";
+import { format } from "date-fns";
 
 const Post = React.forwardRef((props, ref) => {
 
-  const ownref = useRef()
+  const ownref = useRef();
   const titleContainerRef = useRef(null);
-  const ownheight = useRef(new Animated.Value(0)).current;
+  const ownheight = useRef(new Animated.Value(154)).current;
   const iconRotation = useRef(new Animated.Value(0)).current;
-  const ownOpacity = useRef(new Animated.Value(1)).current;
+  const ownOpacity = useRef(new Animated.Value(0)).current;
   const [isExist, setIsExist] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -27,16 +26,18 @@ const Post = React.forwardRef((props, ref) => {
           useNativeDriver: true,
           delay : 0
         }).start();
-      LayoutAnimation.configureNext({
-        duration : 300,
-        update: {type : 'linear'}
-      });
-      setIsExpanded(true);
-      props.scrollRef.current.setNativeProps({ scrollEnabled: false });
-      // props.setFilter(props.item.id);
-      setTimeout(()=>ownref.current.measureLayout(props.scrollRef.current.getNativeScrollRef(), (x, y)=>{
-        props.scrollRef.current.scrollToOffset({offset : y, animated : true});
-      }), 300);
+      Animated.timing(ownheight,
+        {
+          toValue : Dimensions.get('window').height,
+          duration : 300,
+          useNativeDriver: false,
+          delay : 0
+        }).start();
+        props.scrollRef.current.setNativeProps({ scrollEnabled: false });
+        setIsExpanded(true);
+        ownref.current.measureLayout(props.scrollRef.current.getNativeScrollRef(), (x, y)=>{
+          props.scrollRef.current.scrollToOffset({offset : y, animated : true});
+        });
     }
     else {
       Animated.timing(iconRotation,
@@ -45,34 +46,36 @@ const Post = React.forwardRef((props, ref) => {
           duration : 300,
           useNativeDriver: true
         }).start();
-      LayoutAnimation.configureNext({
-        duration : 300,
-        update: {type : 'linear'}
-      });
+      Animated.timing(ownheight,
+        {
+          toValue : 154,
+          duration : 300,
+          useNativeDriver: false,
+          delay : 0
+        }).start();
       setIsExpanded(false);
       props.scrollRef.current.setNativeProps({ scrollEnabled: true })
-      // props.setFilter(null)
     };
   }
 
-  // useEffect(()=>{
-  //   // Animated.timing(ownOpacity,
-  //   //   {
-  //   //     toValue : 1,
-  //   //     duration : 500,
-  //   //     useNativeDriver: true,
-  //   //     delay: (props.posts.length > 6 ? 0 : 500 * props.index)
-  //   //   }).start();
-  //   console.log(isExpanded);
-  // });
+  useEffect(()=>{
+    Animated.timing(ownOpacity,
+      {
+        toValue : 1,
+        duration : 500,
+        useNativeDriver: false,
+        delay: 100 * (props.index % props.bunchSize)
+      }).start();
+  }, []);
 
   return (
       <Animated.View onLayout={props.onLayout} ref={ownref} style={{...styles.nestedContainer,
           opacity : ownOpacity,
-          height : isExist ? (isExpanded ? Dimensions.get('window').height : undefined ) : 0,
+          height : ownheight,
           marginBottom : isExist ? 7 : 0,
         }}>
-        <View>
+        <Animated.View //style={{opacity : isExist ? 1 : 0}}
+        >
           <View ref={titleContainerRef} style={styles.titleContainer}>
             <IconButton
             onPress={async()=>{await Linking.openURL(props.item.link);}}
@@ -120,23 +123,35 @@ const Post = React.forwardRef((props, ref) => {
                 {props.item.summary} 
                 </Text>
           </ScrollView>
-        </View>
+        </Animated.View>
         <View>
         <CardAction
           inColumn={false}>
             <IconButton
-            style={{height : isExist ? undefined : 0}}
-            disabled={isExpanded}
             onPress={()=>{
-                LayoutAnimation.configureNext({
-                  duration : 500,
-                  update: {type : 'linear'}
-                });
+                Animated.parallel(
+                  [Animated.timing(ownheight,
+                    {
+                      toValue : 0,
+                      duration : isExpanded ? 600 : 300,
+                      useNativeDriver: false,
+                      delay : 0
+                    }),
+                    Animated.timing(ownOpacity,
+                      {
+                        toValue : 0,
+                        duration : isExpanded ? 400 : 200,
+                        useNativeDriver: false,
+                        delay : 0
+                    })]
+                ).start();
                 setIsExist(false);
+                if (isExpanded) props.scrollRef.current.setNativeProps({ scrollEnabled: true });
                 props.newsHeights.set(props.item.id, 0);
               }}
             style={{
-                margin : 5,
+                marginLeft : 5,
+                marginBottom : 10,
                 transform : [{
                   scaleX : -1
                 }
