@@ -1,10 +1,13 @@
 import { ScrollView, View, VirtualizedList, StatusBar, Dimensions, Pressable, Text, FlatList, UIManager} from 'react-native';
-//import { FlatList } from 'react-native-bidirectional-infinite-scroll'
 import { IconComponentProvider } from "@react-native-material/core";
 import { useRef, useState, useEffect, createRef, useLayoutEffect } from 'react';
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import Post from './components/Post';
 import { ActivityIndicator } from 'react-native';
+
+// remove before move into production (icons could be saved by built app package)
+import * as Font from 'expo-font';
+import Icon from 'react-native-vector-icons/AntDesign';
 
 var reference_id = null;
 var newsHeights = new Map();
@@ -27,9 +30,13 @@ export default function App() {
     setEnabled(false);
     setIsNextLoading(true);
 
+    // remove before move into production (icons could be saved by built app package)
+    await Font.loadAsync(Icon.font);
+
     let response = await fetch(`http://82.146.37.120:8080/documents?limit=${bunchSize}`);
     let json = await response.json();
     reference_id = json[0]['_id']
+
 
     setIsNextLoading(false);
 
@@ -52,7 +59,6 @@ export default function App() {
     let response = await fetch(`http://82.146.37.120:8080/documents?offset=${Math.abs(posts.length == bunchSize ? 0 : offset - 3) * bunchSize}&limit=${bunchSize}&reference_id=${reference_id}&newer=${(posts.length == bunchSize ? true : offset < 3) ? true : false}`);
     let json = await response.json();
     setIsPrevLoading(false);
-    console.log(json.length);
     if (json.length == bunchSize) {
       prevWasLoaded = true;
       setPosts(prev => {
@@ -110,10 +116,11 @@ export default function App() {
     }
   };
 
-
   useEffect(()=>{
     // console.log(newsHeights);
-    if (!posts.length) getFirstNewsBunch();
+    if (!posts.length) {
+      getFirstNewsBunch();
+    }
     if (nextWasLoaded) {
       // console.log('scroll down')
       scrollRef.current.scrollToOffset({offset : heightToScroll, animated : false});
@@ -121,8 +128,6 @@ export default function App() {
       nextWasLoaded = false;
     }
     if (prevWasLoaded) {
-      console.log('scroll top');
-      console.log(posts.length)
       scrollRef.current.scrollToOffset({offset : bunchSize * (154 + 7), animated : false});
       prevWasLoaded = false;
     }
@@ -142,7 +147,6 @@ export default function App() {
       }}
       onPress={
           ()=>{
-            console.log('pressed');
             setEnabled(false);
             getNewsPrev()
           }
@@ -166,7 +170,6 @@ export default function App() {
       }}
       onPress={
           ()=>{
-            console.log('pressed');
             setEnabled(false);
             getNewsNext()
           }
